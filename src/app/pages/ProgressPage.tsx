@@ -1,19 +1,35 @@
+import { useEffect, useState } from 'react';
 import { useLanguage } from '../contexts/LanguageContext';
+import { progressApi } from '../../lib/api';
+import { Progress } from '../../lib/types';
 import { TrendingUp, Award, Target } from 'lucide-react';
 
 export function ProgressPage() {
   const { t } = useLanguage();
+  const [modules, setModules] = useState<Progress[]>([]);
+  const [loading, setLoading] = useState(true);
 
-  const modules = [
-    { id: 'english', progress: 65, completed: 13, total: 20, color: 'from-[#8b9d83] to-[#9faaa0]' },
-    { id: 'alash', progress: 42, completed: 8, total: 19, color: 'from-[#a67c8a] to-[#b88f9c]' },
-    { id: 'olen', progress: 78, completed: 14, total: 18, color: 'from-[#c9a66b] to-[#d4b67d]' },
-    { id: 'iq', progress: 55, completed: 11, total: 20, color: 'from-[#7c6f5f] to-[#8f8275]' },
-    { id: 'tapqirliq', progress: 30, completed: 6, total: 20, color: 'from-[#9b8b7e] to-[#ad9d90]' },
-    { id: 'sozdik', progress: 88, completed: 22, total: 25, color: 'from-[#8a7f73] to-[#9c9185]' },
-  ];
+  useEffect(() => {
+    progressApi.getAll()
+      .then(setModules)
+      .finally(() => setLoading(false));
+  }, []);
 
-  const overallProgress = Math.round(modules.reduce((sum, m) => sum + m.progress, 0) / modules.length);
+  if (loading) {
+    return (
+      <div className="space-y-4">
+        {[...Array(4)].map((_, i) => (
+          <div key={i} className="h-24 bg-muted rounded-2xl animate-pulse" />
+        ))}
+      </div>
+    );
+  }
+
+  const overallProgress = modules.length
+    ? Math.round(modules.reduce((sum, m) => sum + m.progress, 0) / modules.length)
+    : 0;
+  const totalCompleted = modules.reduce((sum, m) => sum + m.completed, 0);
+  const totalRemaining = modules.reduce((sum, m) => sum + (m.total - m.completed), 0);
 
   return (
     <div className="space-y-8">
@@ -41,7 +57,7 @@ export function ProgressPage() {
             </div>
             <h3>Completed</h3>
           </div>
-          <p className="text-3xl mb-1">{modules.reduce((sum, m) => sum + m.completed, 0)}</p>
+          <p className="text-3xl mb-1">{totalCompleted}</p>
           <p className="text-sm text-muted-foreground">Total lessons</p>
         </div>
 
@@ -52,7 +68,7 @@ export function ProgressPage() {
             </div>
             <h3>Remaining</h3>
           </div>
-          <p className="text-3xl mb-1">{modules.reduce((sum, m) => sum + (m.total - m.completed), 0)}</p>
+          <p className="text-3xl mb-1">{totalRemaining}</p>
           <p className="text-sm text-muted-foreground">Lessons to go</p>
         </div>
       </div>
@@ -61,16 +77,22 @@ export function ProgressPage() {
         <h3 className="mb-6">Module Progress</h3>
         <div className="space-y-4">
           {modules.map((module) => (
-            <div key={module.id}>
+            <div key={module.moduleSlug}>
               <div className="flex items-center justify-between mb-2">
-                <span>{t(`module.${module.id}`)}</span>
-                <span className="text-sm text-muted-foreground">
-                  {module.completed}/{module.total}
-                </span>
+                <div className="flex items-center gap-2">
+                  <span className="text-lg">{module.icon}</span>
+                  <span className="text-sm">{t(`module.${module.moduleSlug}`)}</span>
+                </div>
+                <div className="text-right">
+                  <span className="text-sm text-muted-foreground">
+                    {module.completed}/{module.total}
+                  </span>
+                  <span className="text-sm ml-2">{module.progress}%</span>
+                </div>
               </div>
-              <div className="h-3 bg-muted rounded-full overflow-hidden">
+              <div className="h-2 bg-muted rounded-full overflow-hidden">
                 <div
-                  className={`h-full bg-gradient-to-r ${module.color} transition-all duration-300`}
+                  className={`h-full bg-gradient-to-r ${module.color} transition-all duration-500`}
                   style={{ width: `${module.progress}%` }}
                 />
               </div>

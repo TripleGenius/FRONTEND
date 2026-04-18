@@ -1,17 +1,30 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router';
 import { useLanguage } from '../contexts/LanguageContext';
+import { useAuth } from '../contexts/AuthContext';
 import { Globe } from 'lucide-react';
 
 export function LoginPage() {
   const navigate = useNavigate();
   const { language, setLanguage, t } = useLanguage();
+  const { login } = useAuth();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [error, setError] = useState('');
+  const [loading, setLoading] = useState(false);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    navigate('/');
+    setError('');
+    setLoading(true);
+    try {
+      await login(email, password);
+      navigate('/');
+    } catch {
+      setError('Email эсвэл нууц үг буруу байна');
+    } finally {
+      setLoading(false);
+    }
   };
 
   const languages = [
@@ -66,11 +79,16 @@ export function LoginPage() {
               />
             </div>
 
+            {error && (
+              <p className="text-sm text-red-500 text-center">{error}</p>
+            )}
+
             <button
               type="submit"
-              className="w-full bg-primary text-primary-foreground py-3 rounded-xl hover:opacity-90 transition-opacity"
+              disabled={loading}
+              className="w-full bg-primary text-primary-foreground py-3 rounded-xl hover:opacity-90 transition-opacity disabled:opacity-60"
             >
-              {t('login.button')}
+              {loading ? '...' : t('login.button')}
             </button>
           </form>
 
