@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router';
 import { useLanguage } from '../contexts/LanguageContext';
-import { progressApi } from '../../lib/api';
+import { modulesApi, progressApi } from '../../lib/api';
 import { Progress } from '../../lib/types';
 import { BookOpen, ChevronRight } from 'lucide-react';
 
@@ -12,8 +12,19 @@ export function DashboardPage() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    progressApi.getAll()
-      .then(setModules)
+    Promise.all([modulesApi.getAll(), progressApi.getAll()])
+      .then(([allModules, progress]) => {
+        const progressMap = new Map(progress.map((p: Progress) => [p.moduleSlug, p]));
+        const merged = allModules.map((m: { slug: string; icon: string; color: string }) => ({
+          moduleSlug: m.slug,
+          icon: m.icon,
+          color: m.color,
+          completed: progressMap.get(m.slug)?.completed ?? 0,
+          total: progressMap.get(m.slug)?.total ?? 0,
+          progress: progressMap.get(m.slug)?.progress ?? 0,
+        }));
+        setModules(merged);
+      })
       .finally(() => setLoading(false));
   }, []);
 
