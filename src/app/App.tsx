@@ -6,35 +6,35 @@ import { AuthProvider } from './contexts/AuthContext';
 import { BackendWakeup } from './components/BackendWakeup';
 import { checkBackendHealth, startKeepAlive } from '../lib/keepAlive';
 
+type Status = 'checking' | 'waking' | 'ready';
+
 export default function App() {
-  const [backendReady, setBackendReady] = useState(false);
-  const [showWakeup, setShowWakeup] = useState(false);
+  const [status, setStatus] = useState<Status>('checking');
 
   useEffect(() => {
     let stopKeepAlive: (() => void) | null = null;
 
     const init = async () => {
-      // Try a quick check first (2s timeout)
-      const quickCheck = await Promise.race([
+      // Quick check with 2s timeout
+      const quickOk = await Promise.race([
         checkBackendHealth(),
         new Promise<false>((r) => setTimeout(() => r(false), 2000)),
       ]);
 
-      if (quickCheck) {
-        setBackendReady(true);
+      if (quickOk) {
         stopKeepAlive = startKeepAlive();
+        setStatus('ready');
         return;
       }
 
-      // Backend is cold — show wakeup screen, keep polling
-      setShowWakeup(true);
+      // Cold start — show wakeup screen and keep polling
+      setStatus('waking');
 
       const poll = async () => {
         const ok = await checkBackendHealth();
         if (ok) {
-          setBackendReady(true);
-          setShowWakeup(false);
           stopKeepAlive = startKeepAlive();
+          setStatus('ready');
         } else {
           setTimeout(poll, 3000);
         }
@@ -47,8 +47,8 @@ export default function App() {
     return () => stopKeepAlive?.();
   }, []);
 
-  if (showWakeup && !backendReady) {
-    return <BackendWakeup onReady={() => setBackendReady(true)} />;
+  if (status === 'checking' || status === 'waking') {
+    return <BackendWakeup isWaking={status === 'waking'} />;
   }
 
   return (
