@@ -87,14 +87,17 @@ export function ModuleCard({
 
   const handleShowAnswer = () => {
     setShowAnswer(true);
-    setAnswered((prev) => new Set(prev).add(currentIndex));
+    setAnswered((prev) => {
+      const next = new Set(prev).add(currentIndex);
+      progressApi.update(slug, next.size).catch(() => {});
+      return next;
+    });
   };
 
-  const handleNext = async () => {
+  const handleNext = () => {
     if (currentIndex < displayQuestions.length - 1) {
       setCurrentIndex(currentIndex + 1);
       setShowAnswer(false);
-      await progressApi.update(slug, answered.size).catch(() => {});
     }
   };
 
@@ -204,20 +207,24 @@ export function ModuleCard({
                   initial={{ opacity: 0, scale: 0.95 }}
                   animate={{ opacity: 1, scale: 1 }}
                   transition={{ duration: 0.3 }}
-                  className={`bg-gradient-to-br ${color} bg-opacity-10 rounded-xl p-6 border border-primary/20`}
+                  className="bg-accent rounded-xl p-6 border border-border"
                 >
-                  <p className="text-lg whitespace-pre-wrap">{current.answer}</p>
-                  {current.explanation && !current.flipped && (
-                    <p className="text-sm text-muted-foreground mt-3 whitespace-pre-wrap">
-                      {current.explanation}
-                    </p>
-                  )}
+                  <div className={`h-1 w-12 mx-auto mb-4 rounded-full bg-gradient-to-r ${color}`} />
+                  <p className="text-lg whitespace-pre-wrap text-foreground">{current.answer}</p>
                 </motion.div>
               )}
             </motion.div>
           </div>
 
           <div className="flex gap-3">
+            {currentIndex > 0 && (
+              <button
+                onClick={handlePrevious}
+                className="px-6 py-3 bg-muted text-foreground rounded-xl hover:bg-accent transition-colors"
+              >
+                {t('common.back')}
+              </button>
+            )}
             {!showAnswer ? (
               <button
                 onClick={handleShowAnswer}
@@ -226,18 +233,9 @@ export function ModuleCard({
                 {t('common.showAnswer')}
               </button>
             ) : (
-              <>
-                {currentIndex > 0 && (
-                  <button
-                    onClick={handlePrevious}
-                    className="px-6 py-3 bg-muted text-foreground rounded-xl hover:bg-accent transition-colors"
-                  >
-                    {t('common.back')}
-                  </button>
-                )}
-                <button
-                  onClick={handleNext}
-                  disabled={currentIndex === displayQuestions.length - 1 && !allAnswered}
+              <button
+                onClick={handleNext}
+                disabled={currentIndex === displayQuestions.length - 1 && !allAnswered}
                   className={`flex-1 py-3 rounded-xl transition-opacity ${
                     allAnswered && currentIndex === displayQuestions.length - 1
                       ? `bg-gradient-to-r ${color} text-white hover:opacity-90`
@@ -249,8 +247,7 @@ export function ModuleCard({
                       ? t('common.complete')
                       : `${displayQuestions.length - answered.size} үлдсэн`
                     : t('common.next')}
-                </button>
-              </>
+              </button>
             )}
           </div>
         </div>

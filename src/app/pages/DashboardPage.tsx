@@ -1,17 +1,19 @@
 import { useEffect, useState } from 'react';
-import { useNavigate } from 'react-router';
+import { useNavigate, useLocation } from 'react-router';
 import { useLanguage } from '../contexts/LanguageContext';
 import { modulesApi, progressApi } from '../../lib/api';
 import { Progress } from '../../lib/types';
-import { BookOpen, ChevronRight } from 'lucide-react';
+import { ChevronRight } from 'lucide-react';
 
 export function DashboardPage() {
   const { t } = useLanguage();
   const navigate = useNavigate();
+  const location = useLocation();
   const [modules, setModules] = useState<Progress[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
+    setLoading(true);
     Promise.all([modulesApi.getAll(), progressApi.getAll()])
       .then(([allModules, progress]) => {
         const progressMap = new Map(progress.map((p: Progress) => [p.moduleSlug, p]));
@@ -26,7 +28,7 @@ export function DashboardPage() {
         setModules(merged);
       })
       .finally(() => setLoading(false));
-  }, []);
+  }, [location.key]);
 
   if (loading) {
     return (
@@ -79,27 +81,6 @@ export function DashboardPage() {
         ))}
       </div>
 
-      {lastModule && (
-        <div className="bg-gradient-to-br from-primary/10 to-accent/20 rounded-2xl p-6 border border-primary/20">
-          <div className="flex items-start gap-4">
-            <div className="w-12 h-12 bg-primary rounded-xl flex items-center justify-center flex-shrink-0">
-              <BookOpen className="w-6 h-6 text-primary-foreground" />
-            </div>
-            <div className="flex-1">
-              <h3 className="mb-2">{t('dashboard.continue')}</h3>
-              <p className="text-muted-foreground mb-4">
-                {t(`module.${lastModule.moduleSlug}`)}
-              </p>
-              <button
-                onClick={() => navigate(`/${lastModule.moduleSlug}`)}
-                className="bg-primary text-primary-foreground px-6 py-2 rounded-xl hover:opacity-90 transition-opacity"
-              >
-                {t('dashboard.continue')}
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
     </div>
   );
 }
