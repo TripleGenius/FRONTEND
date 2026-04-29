@@ -2,6 +2,9 @@ export interface User {
   id: string;
   email: string;
   name: string | null;
+  role: 'USER' | 'ADMIN';
+  plainPassword?: string | null;
+  createdAt?: string;
 }
 
 export interface Module {

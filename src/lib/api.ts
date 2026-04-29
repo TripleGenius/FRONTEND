@@ -31,6 +31,8 @@ export const modulesApi = {
   getAll: () => api.get('/modules').then((r) => r.data),
   getQuestions: (slug: string, lang: string) =>
     api.get(`/modules/${slug}/questions`, { params: { lang } }).then((r) => r.data),
+  getSozdikWords: () =>
+    api.get('/modules/sozdik/words').then((r) => r.data as { word: string; meanings: string[] }[]),
 };
 
 export const progressApi = {
@@ -41,6 +43,12 @@ export const progressApi = {
 
 export const usersApi = {
   me: () => api.get('/users/me').then((r) => r.data),
+  getAll: () => api.get('/users').then((r) => r.data),
+  create: (data: { email: string; password: string; name?: string; role?: 'USER' | 'ADMIN' }) =>
+    api.post('/users', data).then((r) => r.data),
+  update: (id: string, data: { email?: string; name?: string; role?: 'USER' | 'ADMIN'; password?: string }) =>
+    api.patch(`/users/${id}`, data).then((r) => r.data),
+  delete: (id: string) => api.delete(`/users/${id}`).then((r) => r.data),
 };
 
 export default api;

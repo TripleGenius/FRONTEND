@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useLanguage } from '../contexts/LanguageContext';
 import { motion } from 'motion/react';
-import { ChevronLeft, Timer, Shuffle } from 'lucide-react';
+import { ChevronLeft, Timer } from 'lucide-react';
 import { useNavigate } from 'react-router';
 import { modulesApi, progressApi } from '../../lib/api';
 import { Question } from '../../lib/types';
@@ -45,8 +45,17 @@ export function ModuleCard({
   const [timer] = useState(0);
   const [answered, setAnswered] = useState<Set<number>>(new Set());
 
-  const buildDisplayList = useCallback((qs: Question[]) => {
+  const [isRandom, setIsRandom] = useState(randomize);
+  const [includePrev, setIncludePrev] = useState(false);
+
+  const buildDisplayList = useCallback((qs: Question[], random: boolean, withPrev: boolean) => {
     let list: DisplayQuestion[] = qs.map((q) => ({ ...q }));
+
+    // explanation өгөгдөл байгаа үед л filter ажиллана (seed хийгдсэний дараа)
+    const hasDirectionData = qs.some((q) => q.explanation?.startsWith('→') || q.explanation?.startsWith('←'));
+    if (hasDirectionData && !withPrev) {
+      list = list.filter((q) => q.explanation?.startsWith('→'));
+    }
 
     if (flipable) {
       list = list.map((q) =>
@@ -56,24 +65,37 @@ export function ModuleCard({
       );
     }
 
-    if (randomize) {
+    if (random) {
       list = shuffle(list);
+    } else {
+      list = [...list].sort((a, b) => a.order - b.order);
     }
 
     return list;
-  }, [randomize, flipable]);
+  }, [flipable]);
 
   useEffect(() => {
     modulesApi.getQuestions(slug, language)
       .then((qs) => {
         setRawQuestions(qs);
-        setDisplayQuestions(buildDisplayList(qs));
+        setDisplayQuestions(buildDisplayList(qs, isRandom, includePrev));
       })
       .finally(() => setLoading(false));
   }, [slug, language]);
 
-  const handleReshuffle = () => {
-    setDisplayQuestions(buildDisplayList(rawQuestions));
+  const handleToggleMode = () => {
+    const newRandom = !isRandom;
+    setIsRandom(newRandom);
+    setDisplayQuestions(buildDisplayList(rawQuestions, newRandom, includePrev));
+    setCurrentIndex(0);
+    setShowAnswer(false);
+    setAnswered(new Set());
+  };
+
+  const handleToggleIncludePrev = () => {
+    const newIncludePrev = !includePrev;
+    setIncludePrev(newIncludePrev);
+    setDisplayQuestions(buildDisplayList(rawQuestions, isRandom, newIncludePrev));
     setCurrentIndex(0);
     setShowAnswer(false);
     setAnswered(new Set());
@@ -153,15 +175,6 @@ export function ModuleCard({
               {icon}
             </div>
             <h2>{title}</h2>
-            {randomize && (
-              <button
-                onClick={handleReshuffle}
-                className="ml-auto w-8 h-8 rounded-lg bg-muted hover:bg-accent transition-colors flex items-center justify-center"
-                title="Дахин холих"
-              >
-                <Shuffle className="w-4 h-4 text-muted-foreground" />
-              </button>
-            )}
           </div>
           <div className="h-2 bg-muted rounded-full overflow-hidden">
             <div
@@ -184,12 +197,39 @@ export function ModuleCard({
             <div className="text-sm text-muted-foreground">
               {currentIndex + 1} / {displayQuestions.length}
             </div>
-            {showTimer && (
-              <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                <Timer className="w-4 h-4" />
-                <span>{timer}s</span>
-              </div>
-            )}
+            <div className="flex items-center gap-3">
+              {showTimer && (
+                <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                  <Timer className="w-4 h-4" />
+                  <span>{timer}s</span>
+                </div>
+              )}
+              {randomize && (
+                <div className="flex gap-2 flex-wrap justify-end">
+                  <button
+                    onClick={handleToggleMode}
+                    className={`text-xs px-2 py-1.5 rounded-lg border transition-colors whitespace-nowrap ${
+                      isRandom
+                        ? 'border-primary text-primary bg-primary/10'
+                        : 'border-border text-muted-foreground'
+                    }`}
+                  >
+                    {isRandom ? 'Ретсіз' : 'Ретті'}
+                  </button>
+                  <button
+                    onClick={handleToggleIncludePrev}
+                    disabled={!isRandom}
+                    className={`text-xs px-2 py-1.5 rounded-lg border transition-colors whitespace-nowrap ${
+                      includePrev
+                        ? 'border-primary text-primary bg-primary/10'
+                        : 'border-border text-muted-foreground'
+                    } disabled:opacity-30 disabled:cursor-not-allowed`}
+                  >
+                    {includePrev ? 'Кейінгі және алдыңғы' : 'Кейінгі'}
+                  </button>
+                </div>
+              )}
+            </div>
           </div>
 
           <div className="min-h-[200px] flex items-center justify-center mb-8">
@@ -200,6 +240,9 @@ export function ModuleCard({
               transition={{ duration: 0.3 }}
               className="text-center w-full"
             >
+              {(current.explanation?.startsWith('←') || current.explanation?.startsWith('→')) && (
+                <p className="text-sm text-muted-foreground mb-3">{current.explanation}</p>
+              )}
               <p className="text-xl mb-6 whitespace-pre-wrap">{current.question}</p>
 
               {showAnswer && (

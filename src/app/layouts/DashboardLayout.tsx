@@ -1,12 +1,12 @@
 import { Outlet, useNavigate, useLocation } from 'react-router';
 import { useLanguage } from '../contexts/LanguageContext';
 import { useAuth } from '../contexts/AuthContext';
-import { Home, BookOpen, TrendingUp, Settings, LogOut } from 'lucide-react';
+import { Home, BookOpen, TrendingUp, Settings, LogOut, Users } from 'lucide-react';
 import { useEffect, useState } from 'react';
 
 export function DashboardLayout() {
   const { t } = useLanguage();
-  const { logout } = useAuth();
+  const { logout, user } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
   const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
@@ -26,6 +26,7 @@ export function DashboardLayout() {
     { path: '/english', icon: BookOpen, label: t('nav.modules') },
     { path: '/progress', icon: TrendingUp, label: t('nav.progress') },
     { path: '/settings', icon: Settings, label: t('nav.settings') },
+    ...(user?.role === 'ADMIN' ? [{ path: '/admin', icon: Users, label: 'Хэрэглэгчид' }] : []),
   ];
 
   const isActive = (path: string) => {
